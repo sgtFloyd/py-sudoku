@@ -1,10 +1,18 @@
+#!/usr/bin/env python
+# solver.py
+
 import sys # required for argv and exit
 
 class Board:
   GRID_SIZE = 9
 
-  def load_file(self, file):
+  def __init__(self, file):
     self.grid = []
+    self.fixed_cells = []
+    self.load_file(file)
+    self.validate()
+
+  def load_file(self, file):
     for line in file:
       row = self.load_row(line)
       if row: self.grid.append(row)
@@ -19,11 +27,25 @@ class Board:
 
   def load_cell(self, char):
     if char == ' ': return None
-    return Cell(char)
+    cell = Cell(char)
+    if cell.fixed:
+      self.fixed_cells.append(cell)
+    return cell
 
   def print_grid(self):
     for row in self.grid:
-      print ' '.join(row)
+      for cell in row:
+        print cell,
+      print
+
+  def solve(self):
+    for cell in fixed_cells:
+      breed(cell)
+
+  def breed(cell):
+    for sibling in cell.siblings:
+      if sibling.abandon(cell) and sibling.is_solved():
+        self.breed(sibling)
 
   def validate(self):
     if len(self.grid) != self.GRID_SIZE:
@@ -37,11 +59,14 @@ class Board:
 
 class Cell:
   ALLOWED_VALUES = range(1, Board.GRID_SIZE+1)
+  BLANK_CHAR = '_'
 
   def __init__(self, char):
-    if char == '_':
+    if char == self.BLANK_CHAR:
+      self.fixed = False
       self.values = self.ALLOWED_VALUES[:]
     else:
+      self.fixed = True
       try:
         value = int(char)
         if value in self.ALLOWED_VALUES:
@@ -51,12 +76,30 @@ class Cell:
         print "invalid cell value: %s" % char
         sys.exit()
 
+  def __repr__(self):
+    if self.is_solved():
+      return str(self.values[0])
+    else:
+      return self.BLANK_CHAR
+
+  def abandon(self, cell):
+    value = cell.values[0]
+    if value in self.values:
+      assert not self.is_solved()
+      self.values.remove(value)
+      return True
+    else:
+      return False
+
+  def is_solved(self):
+    return self.fixed | len(self.values) == 1
+
+
 if len(sys.argv) != 2:  # the program name and one argument
   print "usage: python solver.py <file>"
   sys.exit()
 
 puzzle_file = open(sys.argv[1], 'r')
 
-board = Board()
-board.load_file(puzzle_file)
-board.validate()
+board = Board(puzzle_file)
+board.print_grid()
