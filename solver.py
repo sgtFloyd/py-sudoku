@@ -13,21 +13,22 @@ class Board:
     self.validate()
 
   def load_file(self, file):
-    for line in file:
-      row = self.load_row(line)
+    for row_num, line in enumerate(file):
+      row = self.load_row(line, row_num)
       if row: self.grid.append(row)
     return self.grid
 
-  def load_row(self, line):
+  def load_row(self, line, row_num):
     row = []
-    for char in list(line.strip()):
-      cell = self.load_cell(char)
+    for char_num, char in enumerate(list(line.strip())):
+      point = (row_num, char_num)
+      cell = self.load_cell(char, point)
       if cell: row.append(cell)
     return row
 
-  def load_cell(self, char):
+  def load_cell(self, char, point):
     if char == ' ': return None
-    cell = Cell(char)
+    cell = Cell(char, point)
     if cell.fixed:
       self.fixed_cells.append(cell)
     return cell
@@ -42,10 +43,13 @@ class Board:
     for cell in fixed_cells:
       breed(cell)
 
-  def breed(cell):
-    for sibling in cell.siblings:
+  def breed(self, cell):
+    for sibling in cell.siblings(self):
       if sibling.abandon(cell) and sibling.is_solved():
         self.breed(sibling)
+
+  def siblings(self, cell):
+    row_num, col_num = cell.point
 
   def validate(self):
     if len(self.grid) != self.GRID_SIZE:
@@ -61,7 +65,8 @@ class Cell:
   ALLOWED_VALUES = range(1, Board.GRID_SIZE+1)
   BLANK_CHAR = '_'
 
-  def __init__(self, char):
+  def __init__(self, char, point):
+    self.point = point
     if char == self.BLANK_CHAR:
       self.fixed = False
       self.values = self.ALLOWED_VALUES[:]
@@ -91,11 +96,16 @@ class Cell:
     else:
       return False
 
+  def siblings(self, board):
+    return None
+    # get all of this cell's siblings from the board,
+    # based on row, column and local 3x3 grid
+
   def is_solved(self):
     return self.fixed | len(self.values) == 1
 
 
-if len(sys.argv) != 2:  # the program name and one argument
+if len(sys.argv) != 2:
   print "usage: python solver.py <file>"
   sys.exit()
 
@@ -103,3 +113,5 @@ puzzle_file = open(sys.argv[1], 'r')
 
 board = Board(puzzle_file)
 board.print_grid()
+#board.solve()
+#print; board.print_grid()
