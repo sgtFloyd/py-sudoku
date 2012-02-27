@@ -21,14 +21,14 @@ class Board:
   def load_row(self, line, row_num):
     row = []
     for char_num, char in enumerate(list(line.strip())):
-      point = (row_num, char_num)
+      point = (row_num, char_num/2)
       cell = self.load_cell(char, point)
       if cell: row.append(cell)
     return row
 
   def load_cell(self, char, point):
     if char == ' ': return None
-    cell = Cell(char, point)
+    cell = Cell(char, self, point)
     if cell.fixed:
       self.fixed_cells.append(cell)
     return cell
@@ -40,16 +40,13 @@ class Board:
       print
 
   def solve(self):
-    for cell in fixed_cells:
-      breed(cell)
+    for cell in self.fixed_cells:
+      self.breed(cell)
 
   def breed(self, cell):
-    for sibling in cell.siblings(self):
+    for sibling in cell.get_siblings():
       if sibling.abandon(cell) and sibling.is_solved():
         self.breed(sibling)
-
-  def siblings(self, cell):
-    row_num, col_num = cell.point
 
   def validate(self):
     if len(self.grid) != self.GRID_SIZE:
@@ -65,8 +62,10 @@ class Cell:
   ALLOWED_VALUES = range(1, Board.GRID_SIZE+1)
   BLANK_CHAR = '_'
 
-  def __init__(self, char, point):
+  def __init__(self, char, board, point):
+    self.board = board
     self.point = point
+    self.siblings = None
     if char == self.BLANK_CHAR:
       self.fixed = False
       self.values = self.ALLOWED_VALUES[:]
@@ -96,10 +95,20 @@ class Cell:
     else:
       return False
 
-  def siblings(self, board):
-    return None
-    # get all of this cell's siblings from the board,
-    # based on row, column and local 3x3 grid
+  def get_siblings(self):
+    if self.siblings: return self.siblings
+    my_row, my_col = self.point
+    siblings = []
+    for row_num, row in enumerate(self.board.grid):
+      if row_num == my_row: siblings += row                 # collect siblings in my row
+      for col_num, cell in enumerate(row):
+        if col_num == my_col: siblings.append(cell)         # collect siblings in my column
+        if row_num/3 == my_row/3 and col_num/3 == my_col/3: # collect siblings in my local 3x3 grid
+          siblings.append(cell)
+    siblings = list(set(siblings)) # remove duplicates
+    siblings.remove(self)          # remove self
+    self.siblings = siblings
+    return siblings
 
   def is_solved(self):
     return self.fixed | len(self.values) == 1
@@ -113,5 +122,5 @@ puzzle_file = open(sys.argv[1], 'r')
 
 board = Board(puzzle_file)
 board.print_grid()
-#board.solve()
-#print; board.print_grid()
+board.solve()
+print; board.print_grid()
