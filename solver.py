@@ -39,14 +39,39 @@ class Board:
         print cell,
       print
 
+  def print_grid_values(self):
+    av = Cell.ALLOWED_VALUES
+    ranges = [av[0:len(av)/3],
+              av[len(av)/3:len(av)/3*2],
+              av[len(av)/3*2:len(av)]]
+    for row in self.grid:
+      for values in ranges:
+        for cell in row:
+          for val in values:
+            if val in cell.values:
+              print val,
+            else:
+              print '_',
+          print ' ',
+        print
+      print
+
   def solve(self):
     for cell in self.fixed_cells:
       self.breed(cell)
+    return self.is_solved()
 
   def breed(self, cell):
     for sibling in cell.get_siblings():
       if sibling.abandon(cell) and sibling.is_solved():
         self.breed(sibling)
+
+  def is_solved(self):
+    for row in self.grid:
+      for cell in row:
+        if not cell.is_solved():
+          return False
+    return True
 
   def validate(self):
     if len(self.grid) != self.GRID_SIZE:
@@ -122,5 +147,7 @@ puzzle_file = open(sys.argv[1], 'r')
 
 board = Board(puzzle_file)
 board.print_grid()
-board.solve()
+solved = board.solve()
 print; board.print_grid()
+if not solved:
+  print; board.print_grid_values()
