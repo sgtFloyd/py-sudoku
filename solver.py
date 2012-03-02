@@ -4,6 +4,11 @@
 import sys # required for argv and exit
 
 class Board:
+  """ Sudoku board representation and methods to work with it.
+    Attributes:
+      grid - the main data structure, contains rows of Cells
+      fixed_cells - the Cells with hardcoded values
+  """
   GRID_SIZE = 9
 
   def __init__(self, file):
@@ -13,12 +18,14 @@ class Board:
     self.validate()
 
   def load_file(self, file):
+    """ parse a file into the board grid structure """
     for row_num, line in enumerate(file):
       row = self.load_row(line, row_num)
       if row: self.grid.append(row)
     return self.grid
 
   def load_row(self, line, row_num):
+    """ parse a line of text into one row of the board """
     row = []
     for char_num, char in enumerate(list(line.strip())):
       point = (row_num, char_num/2)
@@ -27,23 +34,24 @@ class Board:
     return row
 
   def load_cell(self, char, point):
+    """ create a cell object from a character of text """
     if char == ' ': return None
     cell = Cell(char, self, point)
-    if cell.fixed:
+    if cell.is_solved():
       self.fixed_cells.append(cell)
     return cell
 
   def print_grid(self):
+    """ print the current state of the board """
     for row in self.grid:
       for cell in row:
         print cell,
       print
 
   def print_grid_values(self):
+    """ show remaining possible values of each cell on the board """
     av = Cell.ALLOWED_VALUES
-    ranges = [av[0:len(av)/3],
-              av[len(av)/3:len(av)/3*2],
-              av[len(av)/3*2:len(av)]]
+    ranges = [av[0:3], av[3:6], av[6:9]]
     for row in self.grid:
       for values in ranges:
         for cell in row:
@@ -51,22 +59,29 @@ class Board:
             if val in cell.values:
               print val,
             else:
-              print '_',
+              print Cell.BLANK_CHAR,
           print ' ',
         print
       print
 
   def solve(self):
+    """ attempt to solve this board """
     for cell in self.fixed_cells:
       self.breed(cell)
+    # TODO: "only cell in cousins which could be..."
     return self.is_solved()
 
   def breed(self, cell):
+    """ recursively propogate this cell's value to all its
+        neighbors. if any of the neighbors become solved
+        because of this propogation, propogate *that* cell's
+        value to *its* neighbors, and so on """
     for sibling in cell.get_siblings():
       if sibling.abandon(cell) and sibling.is_solved():
         self.breed(sibling)
 
   def is_solved(self):
+    """ return True if this board is completely solved """
     for row in self.grid:
       for cell in row:
         if not cell.is_solved():
@@ -74,28 +89,34 @@ class Board:
     return True
 
   def validate(self):
+    """ validate the dimensions of this board """
     if len(self.grid) != self.GRID_SIZE:
       print "puzzle grid must contain %s rows" % self.GRID_SIZE
       sys.exit()
-
     for row in self.grid:
       if len(row) != self.GRID_SIZE:
         print "each row must contain %s cells" % self.GRID_SIZE
         sys.exit()
 
 class Cell:
+  """ Represents one cell in a Sudoku board
+    Attributes:
+      values - possible values for this cell
+      board - the game board this cell belongs to
+      point - the cartesian coordinates of this cell on the board
+      siblings - neighboring cells whose values must be unique from this cell
+  """
   ALLOWED_VALUES = range(1, Board.GRID_SIZE+1)
   BLANK_CHAR = '_'
 
   def __init__(self, char, board, point):
+    """ set the initial values of this cell """
     self.board = board
     self.point = point
     self.siblings = None
     if char == self.BLANK_CHAR:
-      self.fixed = False
       self.values = self.ALLOWED_VALUES[:]
     else:
-      self.fixed = True
       try:
         value = int(char)
         if value in self.ALLOWED_VALUES:
@@ -106,12 +127,16 @@ class Cell:
         sys.exit()
 
   def __repr__(self):
+    """ override the string representation of this cell """
     if self.is_solved():
       return str(self.values[0])
     else:
       return self.BLANK_CHAR
 
   def abandon(self, cell):
+    """ given a solved cell, remove its value
+        from this cell's possible values """
+    assert cell.is_solved()
     value = cell.values[0]
     if value in self.values:
       assert not self.is_solved()
@@ -121,6 +146,8 @@ class Cell:
       return False
 
   def get_siblings(self):
+    """ gather all of this cell's 'sibling' cells. siblings
+        are found in this cell's row, column, or 3x3 grid """
     if self.siblings: return self.siblings
     my_row, my_col = self.point
     siblings = []
@@ -135,8 +162,14 @@ class Cell:
     self.siblings = siblings
     return siblings
 
+  def get_cousins(self):
+    """ gather all of this cell's 'cousin' cells. cousins
+        are found as the siblings of this cell's local 3x3 grid """
+    return None
+
   def is_solved(self):
-    return self.fixed | len(self.values) == 1
+    """ return True if there is only one possible value remaining """
+    return len(self.values) == 1
 
 
 if len(sys.argv) != 2:
