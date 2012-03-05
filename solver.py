@@ -66,9 +66,10 @@ class Board:
 
   def solve(self):
     """ attempt to solve this board """
+    # breed the initial board
     for cell in self.fixed_cells:
       self.breed(cell)
-    # TODO: "only cell in cousins which could be..."
+    # TODO: "only cell in this row/col/grid which could be..."
     return self.is_solved()
 
   def breed(self, cell):
@@ -149,23 +150,29 @@ class Cell:
     """ gather all of this cell's 'sibling' cells. siblings
         are found in this cell's row, column, or 3x3 grid """
     if self.siblings: return self.siblings
-    my_row, my_col = self.point
-    siblings = []
-    for row_num, row in enumerate(self.board.grid):
-      if row_num == my_row: siblings += row                 # collect siblings in my row
-      for col_num, cell in enumerate(row):
-        if col_num == my_col: siblings.append(cell)         # collect siblings in my column
-        if row_num/3 == my_row/3 and col_num/3 == my_col/3: # collect siblings in my local 3x3 grid
-          siblings.append(cell)
-    siblings = list(set(siblings)) # remove duplicates
-    siblings.remove(self)          # remove self
+    siblings = list(set(
+      self.get_row()
+      + self.get_col()
+      + self.get_grid()
+    ))
+    siblings.remove(self)
     self.siblings = siblings
     return siblings
 
-  def get_cousins(self):
-    """ gather all of this cell's 'cousin' cells. cousins
-        are found as the siblings of this cell's local 3x3 grid """
-    return None
+  def get_row(self):
+    my_row, my_col = self.point
+    return self.board.grid[my_row]
+
+  def get_col(self):
+    my_row, my_col = self.point
+    return [row[my_col] for row in self.board.grid]
+
+  def get_grid(self):
+    my_row, my_col = self.point
+    return [cell
+      for row_num, row in enumerate(self.board.grid)
+        for col_num, cell in enumerate(row)
+          if row_num/3 == my_row/3 and col_num/3 == my_col/3]
 
   def is_solved(self):
     """ return True if there is only one possible value remaining """
