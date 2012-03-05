@@ -69,7 +69,18 @@ class Board:
     # breed the initial board
     for cell in self.fixed_cells:
       self.breed(cell)
-    # TODO: "only cell in this row/col/grid which could be..."
+
+    modified = True
+    while(modified):
+      modified = False
+      for row in self.grid:
+        for cell in row:
+          if not cell.is_solved():
+            if cell.develop():
+              modified = True
+              self.breed(cell)
+
+    # TODO: check for 'naked pairs'
     return self.is_solved()
 
   def breed(self, cell):
@@ -146,9 +157,27 @@ class Cell:
     else:
       return False
 
+  def develop(self):
+    """ compare this cell with its 'cousin' groups, checking
+        if this is the only cell able to take a specific value """
+    for group in [self.get_row(), self.get_col(), self.get_grid()]:
+      diff = self.get_diff(group)
+      diff_size = len(diff)
+      if diff_size == 1:
+        self.values = list(diff)
+        return True
+    return False
+
+  def get_diff(self, group):
+    group_vals = []
+    for cousin in group:
+      if self != cousin:
+        group_vals += cousin.values
+    return set(self.values) - set(group_vals)
+
   def get_siblings(self):
     """ gather all of this cell's 'sibling' cells. siblings
-        are found in this cell's row, column, or 3x3 grid """
+        are found in this cell's row, column, and 3x3 grid """
     if self.siblings: return self.siblings
     siblings = list(set(
       self.get_row()
@@ -191,3 +220,9 @@ solved = board.solve()
 print; board.print_grid()
 if not solved:
   print; board.print_grid_values()
+"""
+board = Board(open('puzzles/evil_unsolved.txt', 'r'))
+for cell in board.fixed_cells:
+  board.breed(cell)
+board.print_grid_values()
+"""
